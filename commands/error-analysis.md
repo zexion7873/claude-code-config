@@ -1,56 +1,39 @@
-# Error Analysis and Resolution
+# Error Analysis
 
-Analyze and resolve errors in: $ARGUMENTS
+Diagnose an error's root cause and propose the smallest fix.
 
-Perform comprehensive error analysis:
+## Input
 
-1. **Error Pattern Analysis**:
-   - Categorize error types
-   - Identify root causes
-   - Trace error propagation
-   - Analyze error frequency
-   - Correlate with system events
+`$ARGUMENTS` — error message, stack trace, log excerpt, or one-line symptom.
 
-2. **Debugging Strategy**:
-   - Stack trace analysis
-   - Variable state inspection
-   - Execution flow tracing
-   - Memory dump analysis
-   - Race condition detection
+## Workflow
 
-3. **Error Handling Improvements**:
-   - Custom exception classes
-   - Error boundary implementation
-   - Retry logic with backoff
-   - Circuit breaker patterns
-   - Graceful degradation
+1. **Read the error verbatim**: full stack trace, error code, surrounding log lines, request context.
+2. **Locate the throw site**: open the file at `frame:line`, read enough surrounding code to understand the call.
+3. **Trace upward** to find where the bad state was introduced. The throw site is rarely the bug.
+4. **Form one hypothesis** and name what would falsify it. Test cheaply (read code, run a probe, check input).
+5. **Propose the minimal fix** at the right layer. Don't paper over symptoms with `try/catch` at the throw site.
 
-4. **Logging Enhancement**:
-   - Structured logging setup
-   - Correlation ID implementation
-   - Log aggregation strategy
-   - Debug vs production logging
-   - Sensitive data masking
+## Diagnosis checklist
 
-5. **Monitoring Integration**:
-   - Sentry/Rollbar setup
-   - Error alerting rules
-   - Error dashboards
-   - Trend analysis
-   - SLA impact assessment
+- **Reproducibility**: deterministic, intermittent, environment-specific?
+- **When did it start**: recent deploy, config change, dependency upgrade?
+- **What input triggers it**: minimal repro case?
+- **Boundary or invariant violated**: null where non-null expected, ordering assumption, race?
+- **Error type fit**: does the exception name match what's actually wrong, or is it being raised in a misleading place?
 
-6. **Recovery Mechanisms**:
-   - Automatic recovery procedures
-   - Data consistency checks
-   - Rollback strategies
-   - State recovery
-   - Compensation logic
+## Output
 
-7. **Prevention Strategies**:
-   - Input validation
-   - Type safety improvements
-   - Contract testing
-   - Defensive programming
-   - Code review checklist
+- **Symptom**: one sentence
+- **Root cause**: with evidence (`file:line`, log line, repro steps)
+- **Fix**: smallest change that removes the cause, with `file:line`
+- **Regression test**: if the bug class can recur, propose one — don't write it unless asked
+- **Related risk**: similar code paths that might have the same bug
 
-Provide specific fixes, preventive measures, and long-term reliability improvements. Include test cases for each error scenario.
+## Constraints
+
+- Fix the cause, not the symptom. Don't wrap throwing code in `try/catch` as the primary fix.
+- **Don't add retry, circuit breaker, fallback, or graceful degradation unless the user explicitly asks.** These are architectural decisions, not error-fix scope.
+- **Don't add validation for inputs that come from internal callers.** Validate only at system boundaries (user input, external APIs).
+- Don't propose adding Sentry / monitoring / alerting unless the user is debugging a production incident and explicitly asks for telemetry.
+- Don't refactor surrounding code while diagnosing. List unrelated smells as follow-ups; don't fix them.
